@@ -1,0 +1,77 @@
+import requests
+import re
+from Crypto.Cipher import AES
+import os
+import re
+
+if not os.path.exists("E:/python进阶学习/m3u8视频下载/视频"):
+    os.makedirs("E:/python进阶学习/m3u8视频下载/视频")
+
+# path = os.makedirs("E:/python进阶学习/m3u8视频下载/视频")
+url = 'https://1258712167.vod2.myqcloud.com/fb8e6c92vodtranscq1258712167/41a852165285890805458937245/drm/voddrm.token.dWluPTE0Mzk1MjQyMTY7dm9kX3R5cGU9MDtjaWQ9NDA0ODgwO3Rlcm1faWQ9MTAyNjYxMzM5O3Bsc2tleT0wMDA0MDAwMGQxODM4NWIyNjczNWExOTk2NjFlMDEzZmQyOGVhMThiNWU0M2RjMzk2N2VkYzFkNzZjYjUzZTY5MmM4MGE0MTk2YzkxNDg0N2ZmY2RhODUzO3Bza2V5PQ==.v.f56150.m3u8?sign=f24bcac0ac2e23831db0bcb07b9a51d7&us=42808213965822260&t=60249d07&exper=0'
+# download_url = re.findall('(.*?)v\..*\.m3u8\?us=', url)[0]
+download_url = 'https://1258712167.vod2.myqcloud.com/fb8e6c92vodtranscq1258712167/41a852165285890805458937245/drm/voddrm.token.dWluPTE0Mzk1MjQyMTY7dm9kX3R5cGU9MDtjaWQ9NDA0ODgwO3Rlcm1faWQ9MTAyNjYxMzM5O3Bsc2tleT0wMDA0MDAwMGQxODM4NWIyNjczNWExOTk2NjFlMDEzZmQyOGVhMThiNWU0M2RjMzk2N2VkYzFkNzZjYjUzZTY5MmM4MGE0MTk2YzkxNDg0N2ZmY2RhODUzO3Bza2V5PQ==.'
+print(download_url)
+
+class M3u8:
+
+    def __init__(self):
+        self.content_url = download_url
+        self.download_url = url
+        self.vi = "0x00000000000000000000000000000000"
+        self.i = 1
+
+    def get_key_url(self):
+        m3u8_url = requests.get(self.download_url).text
+        key_url = \
+        re.findall('#EXT-X-KEY:METHOD=AES-128,URI="(.*?)",IV=0x000000000000000000000000000000', m3u8_url, re.S)[0]
+        return key_url
+
+    def get_key(self, key_url):
+        content_key = requests.get(key_url).content
+        return content_key
+
+    def get_ts_url(self):
+        m3u8_url = requests.get(self.download_url).text
+        ts_url = re.findall('#EXTINF:.*?,(.*?)#', m3u8_url, re.S)
+        print(ts_url)
+        print('总共有', len(ts_url), '条')
+        return ts_url
+
+    def get_ts_content(self, ts_url):
+        url_content_ts = self.content_url + t
+        content = requests.get(url_content_ts).content  # 获取加密视频内容
+        return content
+
+    def decrypt(self, content_key, content):
+        vt = self.vi.replace('0x', '')[0:16].encode()  # 偏移码
+        ci = AES.new(content_key, AES.MODE_CBC, vt)  # 构建解码器
+        content_ts = ci.decrypt(content)  # 解码ts中的二进制格式
+        return content_ts
+
+    def save(self, content_ts):
+        if len(str(+self.i)) == 1:
+            a = '000' + str(+self.i)
+        if len(str(+self.i)) == 2:
+            a = '00' + str(+self.i)
+        if len(str(+self.i)) == 3:
+            a = '0' + str(+self.i)
+
+        with open('视频' + '/' + a + '.ts', 'wb')as f:
+            f.write(content_ts)
+            print('======================')
+            print('正在下载第', self.i, '个视频')
+        self.i += 1
+
+
+if __name__ == '__main__':
+    m3u8 = M3u8()
+    key_url = m3u8.get_key_url()
+    content_key = m3u8.get_key(key_url)
+    ts_url = m3u8.get_ts_url()
+    for ts in ts_url:
+        t = ts.strip()
+        c1 = m3u8.get_ts_content(t)
+        content_ts = m3u8.decrypt(content_key, c1)
+        m3u8.save(content_ts)
+    print('下载完成')
